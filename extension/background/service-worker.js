@@ -29,6 +29,16 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     return true;
   }
 
+  if (msg.action === "updateLists") {
+    updateLists(msg.sites, msg.apps)
+      .then(() => sendResponse({ ok: true }))
+      .catch((err) => {
+        console.error("[WebBlocker] updateLists error:", err);
+        sendResponse({ ok: false, error: err.message });
+      });
+    return true;
+  }
+
   if (msg.action === "getState") {
     getState()
       .then((state) => sendResponse(state))
@@ -140,6 +150,53 @@ async function startBlocking(sites, apps, durationMinutes) {
     endTime,
     duration: durationMinutes,
   });
+}
+
+// -- Update lists while blocking --
+async function updateLists(sites, apps) {
+  console.log("[WebBlocker] Updating lists — sites:", sites, "apps:", apps);
+
+  // Rebuild website rules
+  const blockedPageURL = chrome.runtime.getURL("/blocked/blocked.html");
+  const rules = [];
+  sites.forEach((domain, i) => {
+    const ruleBase = RULE_ID_START + i * 2;
+    rules.push({
+      id: ruleBase,
+      priority: 1,
+      action: { type: "redirect", redirect: { url: blockedPageURL } },
+      condition: { urlFilter: "||" + domain, resourceTypes: ["main_frame"] },
+    });
+    rules.push({
+      id: ruleBase + 1,
+      priority: 1,
+      action: { type: "block" },
+      condition: {
+        urlFilter: "||" + domain,
+        resourceTypes: [
+          "sub_frame", "stylesheet", "script", "image", "font",
+          "xmlhttprequest", "media", "websocket", "other",
+        ],
+      },
+    });
+  });
+
+  const existing = await chrome.declarativeNetRequest.getDynamicRules();
+  const existingIds = existing.map((r) => r.id);
+  await chrome.declarativeNetRequest.updateDynamicRules({
+    removeRuleIds: existingIds,
+    addRules: rules,
+  });
+
+  // Update app kill alarm
+  if (apps.length > 0) {
+    try { await sendNativeMessage({ action: "kill", apps }); } catch (_) {}
+    await chrome.alarms.create(APP_KILL_ALARM, { periodInMinutes: 5 / 60 });
+  } else {
+    await chrome.alarms.clear(APP_KILL_ALARM);
+  }
+
+  await chrome.storage.local.set({ sites, apps });
 }
 
 // -- Stop blocking --

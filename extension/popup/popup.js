@@ -47,7 +47,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 addSiteBtn.addEventListener("click", addSite);
 siteInput.addEventListener("keydown", (e) => { if (e.key === "Enter") addSite(); });
 
-function addSite() {
+async function addSite() {
   let domain = siteInput.value.trim().toLowerCase();
   domain = domain.replace(/^https?:\/\//, "").replace(/\/.*$/, "").replace(/^www\./, "");
   if (!domain || sites.includes(domain)) return;
@@ -56,13 +56,14 @@ function addSite() {
   siteInput.value = "";
   renderSites();
   updateUI();
+  if (blocking) await sendMessage({ action: "updateLists", sites, apps });
 }
 
 // -- Add app --
 addAppBtn.addEventListener("click", addApp);
 appInput.addEventListener("keydown", (e) => { if (e.key === "Enter") addApp(); });
 
-function addApp() {
+async function addApp() {
   let name = appInput.value.trim();
   if (!name || apps.includes(name)) return;
   apps.push(name);
@@ -70,6 +71,7 @@ function addApp() {
   appInput.value = "";
   renderApps();
   updateUI();
+  if (blocking) await sendMessage({ action: "updateLists", sites, apps });
 }
 
 // -- Render lists --
@@ -140,11 +142,6 @@ function updateUI() {
     toggleBtn.disabled = false;
     timerEl.classList.remove("hidden");
     slider.disabled = true;
-    addSiteBtn.disabled = true;
-    siteInput.disabled = true;
-    addAppBtn.disabled = true;
-    appInput.disabled = true;
-    document.querySelectorAll(".remove").forEach((b) => (b.disabled = true));
   } else {
     toggleBtn.textContent = "Start Blocking";
     toggleBtn.classList.remove("active");
