@@ -1,0 +1,48 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f0f0f0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  color: #1a1a1a;
+}
+
+.card {
+  text-align: center;
+  background: #fff;
+  padding: 48px 40px;
+  border-radius: 16px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+  max-width: 400px;
+}
+
+.icon {
+  font-size: 64px;
+  margin-bottom: 16px;
+}
+
+h1 {
+  font-size: 28px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+p {
+  font-size: 16px;
+  color: #555;
+  margin-bottom: 8px;
+}
+
+.timer {
+  font-size: 32px;
+  font-weight: 700;
+  color: #e44;
+  margin-top: 16px;
+}

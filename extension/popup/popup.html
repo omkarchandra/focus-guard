@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <h1>Web Blocker</h1>
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab active" data-tab="sites">Sites</button>
+      <button class="tab" data-tab="apps">Apps</button>
+    </div>
+
+    <!-- Sites panel -->
+    <div class="panel active" id="panel-sites">
+      <div class="input-row">
+        <input type="text" id="site-input" placeholder="e.g. reddit.com">
+        <button id="add-site-btn">Add</button>
+      </div>
+      <ul id="site-list"></ul>
+    </div>
+
+    <!-- Apps panel -->
+    <div class="panel" id="panel-apps">
+      <div class="input-row">
+        <input type="text" id="app-input" placeholder="e.g. Discord">
+        <button id="add-app-btn">Add</button>
+      </div>
+      <ul id="app-list"></ul>
+    </div>
+
+    <!-- Duration slider -->
+    <div class="slider-section">
+      <label for="duration-slider">Block for: <span id="duration-label">30 min</span></label>
+      <input type="range" id="duration-slider" min="0" max="9" value="5" step="1">
+      <div class="slider-ticks">
+        <span>5</span><span>10</span><span>15</span><span>20</span><span>25</span><span>30</span><span>45</span><span>60</span><span>90</span><span>120</span>
+      </div>
+    </div>
+
+    <!-- Controls -->
+    <button id="toggle-btn" class="primary">Start Blocking</button>
+
+    <!-- Timer -->
+    <div id="timer" class="timer hidden">
+      <span id="time-remaining"></span> remaining
+    </div>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>
