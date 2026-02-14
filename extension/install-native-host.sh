@@ -19,7 +19,7 @@ fi
 
 HOST_NAME="com.webblocker.appblocker"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-HOST_SCRIPT="$SCRIPT_DIR/native-host/app_blocker.py"
+HOST_SCRIPT="$SCRIPT_DIR/native-host/run_host.sh"
 NATIVE_DIR="$HOME/Library/Application Support/Comet/NativeMessagingHosts"
 
 # Create NativeMessagingHosts directory

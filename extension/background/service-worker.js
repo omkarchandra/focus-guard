@@ -1,6 +1,5 @@
 const ALARM_NAME = "web-blocker-timer";
-const APP_KILL_ALARM = "app-kill-interval";
-const NATIVE_HOST = "com.webblocker.appblocker";
+const KILL_SERVER = "http://127.0.0.1:7532";
 const RULE_ID_START = 1;
 
 console.log("[WebBlocker] Service worker loaded");
@@ -59,34 +58,25 @@ chrome.alarms.onAlarm.addListener((alarm) => {
     console.log("[WebBlocker] Timer expired, stopping");
     stopBlocking();
   }
-  if (alarm.name === APP_KILL_ALARM) {
-    killBlockedApps();
-  }
 });
 
-// -- Kill blocked apps via native host --
-async function killBlockedApps() {
-  const data = await chrome.storage.local.get(["blocking", "apps"]);
-  if (!data.blocking || !data.apps || data.apps.length === 0) return;
-
-  try {
-    const response = await sendNativeMessage({ action: "kill", apps: data.apps });
-    console.log("[WebBlocker] Kill results:", response);
-  } catch (err) {
-    console.error("[WebBlocker] Native messaging error:", err);
-  }
+// -- App blocking via local server --
+async function blockApps(apps) {
+  const res = await fetch(KILL_SERVER + "/block", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ apps }),
+  });
+  return res.json();
 }
 
-function sendNativeMessage(msg) {
-  return new Promise((resolve, reject) => {
-    chrome.runtime.sendNativeMessage(NATIVE_HOST, msg, (response) => {
-      if (chrome.runtime.lastError) {
-        reject(new Error(chrome.runtime.lastError.message));
-      } else {
-        resolve(response);
-      }
-    });
+async function unblockApps() {
+  const res = await fetch(KILL_SERVER + "/unblock", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({}),
   });
+  return res.json();
 }
 
 // -- Start blocking --
@@ -128,14 +118,11 @@ async function startBlocking(sites, apps, durationMinutes) {
 
   // --- App blocking ---
   if (apps.length > 0) {
-    // Kill immediately
     try {
-      await sendNativeMessage({ action: "kill", apps });
+      await blockApps(apps);
     } catch (err) {
-      console.warn("[WebBlocker] Native host not available:", err.message);
+      console.warn("[WebBlocker] Kill server not available:", err.message);
     }
-    // Set recurring alarm to re-kill every 5 seconds
-    await chrome.alarms.create(APP_KILL_ALARM, { periodInMinutes: 5 / 60 });
   }
 
   // --- Timer ---
@@ -156,7 +143,6 @@ async function startBlocking(sites, apps, durationMinutes) {
 async function updateLists(sites, apps) {
   console.log("[WebBlocker] Updating lists — sites:", sites, "apps:", apps);
 
-  // Rebuild website rules
   const blockedPageURL = chrome.runtime.getURL("/blocked/blocked.html");
   const rules = [];
   sites.forEach((domain, i) => {
@@ -188,12 +174,10 @@ async function updateLists(sites, apps) {
     addRules: rules,
   });
 
-  // Update app kill alarm
   if (apps.length > 0) {
-    try { await sendNativeMessage({ action: "kill", apps }); } catch (_) {}
-    await chrome.alarms.create(APP_KILL_ALARM, { periodInMinutes: 5 / 60 });
+    try { await blockApps(apps); } catch (_) {}
   } else {
-    await chrome.alarms.clear(APP_KILL_ALARM);
+    try { await unblockApps(); } catch (_) {}
   }
 
   await chrome.storage.local.set({ sites, apps });
@@ -203,18 +187,15 @@ async function updateLists(sites, apps) {
 async function stopBlocking() {
   console.log("[WebBlocker] Stopping all blocks");
 
-  // Clear website rules
   const existing = await chrome.declarativeNetRequest.getDynamicRules();
   const existingIds = existing.map((r) => r.id);
   if (existingIds.length > 0) {
     await chrome.declarativeNetRequest.updateDynamicRules({ removeRuleIds: existingIds });
   }
 
-  // Clear all alarms
   await chrome.alarms.clear(ALARM_NAME);
-  await chrome.alarms.clear(APP_KILL_ALARM);
+  try { await unblockApps(); } catch (_) {}
 
-  // Update state
   await chrome.storage.local.set({
     blocking: false,
     endTime: null,
